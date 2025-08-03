@@ -60,8 +60,35 @@ class Crafter(embodied.Env):
       if self.visualize:
         self._save_image(image)
       return self._obs(image, 0.0, {}, is_first=True)
-    image, reward, self._done, info = self._env.step(action['action'])
-    self._reward += reward
+    
+    image, reward, self._done, info = self._env.step(action['action']) # gets default reward from Env step function
+    
+    current_inventory = info['inventory']
+    if self._prev_inventory:
+      # Reward for any positive increase in inventory counts
+      for item, count in current_inventory.items():
+          prev_count = self._prev_inventory.get(item, 0)
+          diff = count - prev_count
+          if diff > 0:
+              reward += 0.1 * diff  # scale as you like
+    self._prev_inventory = current_inventory.copy()
+    
+    self._reward = reward
+    
+    
+    
+    # Track reward and inventory count changes
+    print(f"[Step {self._length}] Reward: {reward:.2f}")
+    print("Inventory:")
+    for item, count in current_inventory.items():
+        prev_count = self._prev_inventory.get(item, 0) if self._prev_inventory else 0
+        if count != prev_count:
+            print(f"  {item}: {prev_count} -> {count} (+{count - prev_count})")
+    print("-" * 30)
+
+    
+    
+    
     self._length += 1
     if self._done and self._logdir:
       self._write_stats(self._length, self._reward, info)
