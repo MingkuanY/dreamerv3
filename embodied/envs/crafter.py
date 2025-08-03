@@ -33,6 +33,7 @@ class Crafter(embodied.Env):
         'is_terminal': embodied.Space(bool),
         'log_reward': embodied.Space(np.float32),
         'grayscale': embodied.Space(np.uint8, self._env.observation_space.shape),
+        'semantic': embodied.Space(np.uint8, shape=(64, 64, 1)),
     }
     if self._logs:
       spaces.update({
@@ -123,6 +124,13 @@ class Crafter(embodied.Env):
     grayscale = np.expand_dims(grayscale, axis=-1)
     grayscale = np.repeat(grayscale, 3, axis=-1)
     
+    if "semantic" in info:
+      semantic = info["semantic"]
+      semantic = np.expand_dims(semantic, axis=-1)
+    else:
+      semantic_image = self._env._sem_view()
+      semantic = np.expand_dims(semantic_image, axis=-1)
+    
     obs = dict(
         image=image,
         reward=np.float32(reward),
@@ -131,6 +139,7 @@ class Crafter(embodied.Env):
         is_terminal=is_terminal,
         log_reward=np.float32(info['reward'] if info else 0.0),
         grayscale=grayscale,
+        semantic=semantic,
     )
     if self._logs:
       log_achievements = {
