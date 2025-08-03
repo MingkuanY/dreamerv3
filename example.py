@@ -11,8 +11,8 @@ def main():
 
   config = embodied.Config(dreamerv3.Agent.configs['defaults'])
   config = config.update({
-      **dreamerv3.Agent.configs['size100m'],
-      'logdir': f'~/logdir/{embodied.timestamp()}-example',
+      **dreamerv3.Agent.configs['size25m'],
+      'logdir': f'/home/ei-lab/Documents/work/mk-dreamerv3/dreamerv3/dreamerv3/logdir/test3-representations',
       'run.train_ratio': 32,
   })
   config = embodied.Flags(config).parse()
@@ -45,10 +45,10 @@ def main():
         online=config.replay.online)
 
   def make_env(config, env_id=0):
-    import crafter
-    from embodied.envs import from_gym
-    env = crafter.Env()
-    env = from_gym.FromGym(env)
+    from embodied.envs.crafter import Crafter
+    # from embodied.envs import from_gym
+    env = Crafter(task='reward', size=(64, 64), logs=False, logdir=config.logdir)
+    # env = from_gym.FromGym(env)
     env = dreamerv3.wrap_env(env, config)
     return env
 

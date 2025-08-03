@@ -28,7 +28,7 @@ defaults:
     logical_cpus: 0
     debug: False
     policy_devices: [0]
-    train_devices: [0]
+    train_devices: [0,1]
     sync_every: 1
     profiler: False
     transfer_guard: True
@@ -88,7 +88,7 @@ defaults:
   # Agent
   report: True
   report_gradnorms: False
-  batch_size: 16
+  batch_size: 8
   batch_length: 65
   batch_length_eval: 33
   replay_length: 0
@@ -220,7 +220,7 @@ atari100k:
 crafter:
   task: crafter_reward
   run:
-    num_envs: 1
+    num_envs: 1 # 16 if running normally, 1 if visualize on
     log_keys_max: '^log_achievement_.*'
     log_keys_sum: '^log_reward$'
     log_video_fps: 10
