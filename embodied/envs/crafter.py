@@ -32,6 +32,7 @@ class Crafter(embodied.Env):
         'is_last': embodied.Space(bool),
         'is_terminal': embodied.Space(bool),
         'log_reward': embodied.Space(np.float32),
+        'grayscale': embodied.Space(np.uint8, self._env.observation_space.shape),
     }
     if self._logs:
       spaces.update({
@@ -117,6 +118,11 @@ class Crafter(embodied.Env):
   def _obs(
       self, image, reward, info,
       is_first=False, is_last=False, is_terminal=False):
+    
+    grayscale = np.dot(image[...,:3], [0.2989, 0.5870, 0.1140]).astype(np.uint8)
+    grayscale = np.expand_dims(grayscale, axis=-1)
+    grayscale = np.repeat(grayscale, 3, axis=-1)
+    
     obs = dict(
         image=image,
         reward=np.float32(reward),
@@ -124,6 +130,7 @@ class Crafter(embodied.Env):
         is_last=is_last,
         is_terminal=is_terminal,
         log_reward=np.float32(info['reward'] if info else 0.0),
+        grayscale=grayscale,
     )
     if self._logs:
       log_achievements = {
