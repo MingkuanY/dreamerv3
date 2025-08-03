@@ -2,6 +2,7 @@ import json
 
 import embodied
 import numpy as np
+from ..run.run_utils import ImageUtil
 
 
 class Crafter(embodied.Env):
@@ -18,6 +19,9 @@ class Crafter(embodied.Env):
     self._reward = None
     self._achievements = crafter.constants.achievements.copy()
     self._done = True
+    self.visualize = False
+    if self.visualize:
+      self._image_util = ImageUtil(str(self._logdir), experiment_label='crafter')
 
   @property
   def obs_space(self):
@@ -48,17 +52,40 @@ class Crafter(embodied.Env):
       self._length = 0
       self._reward = 0
       self._done = False
+      self._image_count = 0
+      
       image = self._env.reset()
+      self._prev_inventory = self._env._player.inventory.copy()
+      
+      if self.visualize:
+        self._save_image(image)
       return self._obs(image, 0.0, {}, is_first=True)
     image, reward, self._done, info = self._env.step(action['action'])
     self._reward += reward
     self._length += 1
     if self._done and self._logdir:
       self._write_stats(self._length, self._reward, info)
+    
+    # save the following images in a folder
+    # ask GPT to write a script to animate the images for visualization
+    if self.visualize:
+      print("visualizing")
+      self._save_image(image)
+    
     return self._obs(
         image, reward, info,
         is_last=self._done,
         is_terminal=info['discount'] == 0)
+  
+  def _save_image(self, image):
+    image_name = f"episode{self._episode:03d}_frame{self._image_count:05d}.png"
+    self._image_util.print_image(
+        image_mat=image,
+        image_folder=self._image_util.actual_image_folder,
+        image_name=image_name,
+        is_normalized=False
+    )
+    self._image_count += 1
 
   def _obs(
       self, image, reward, info,
