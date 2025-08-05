@@ -127,10 +127,10 @@ class Crafter(embodied.Env):
     
     if "semantic" in info:
       semantic = info["semantic"]
-      semantic = np.expand_dims(semantic, axis=-1)
     else:
-      semantic_image = self._env._sem_view()
-      semantic = np.expand_dims(semantic_image, axis=-1)
+      semantic = self._env._sem_view()
+    semantic = np.expand_dims(semantic, axis=-1)
+    semantic = (semantic / 12.0 * 255).astype(np.uint8)
     
     danger = self._danger_heatmap()
     
