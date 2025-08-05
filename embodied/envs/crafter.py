@@ -34,6 +34,7 @@ class Crafter(embodied.Env):
         'log_reward': embodied.Space(np.float32),
         'grayscale': embodied.Space(np.uint8, self._env.observation_space.shape),
         'semantic': embodied.Space(np.uint8, shape=(64, 64, 1)),
+        'danger': embodied.Space(np.uint8, shape=(64, 64, 3)),
     }
     if self._logs:
       spaces.update({
@@ -131,6 +132,8 @@ class Crafter(embodied.Env):
       semantic_image = self._env._sem_view()
       semantic = np.expand_dims(semantic_image, axis=-1)
     
+    danger = self._danger_heatmap()
+    
     obs = dict(
         image=image,
         reward=np.float32(reward),
@@ -140,6 +143,7 @@ class Crafter(embodied.Env):
         log_reward=np.float32(info['reward'] if info else 0.0),
         grayscale=grayscale,
         semantic=semantic,
+        danger=danger,
     )
     if self._logs:
       log_achievements = {
@@ -160,6 +164,41 @@ class Crafter(embodied.Env):
     lines += json.dumps(stats) + '\n'
     filename.write(lines)
     print(f'Wrote stats: {filename}')
+  
+  def _danger_heatmap(self):
+    world = self._env._world
+    H, W = world.area
+    heatmap = np.zeros((H, W), dtype=np.float32)
+    
+    def apply_gaussian(heatmap, pos, intensity=1.0, sigma=3.0):
+      for x in range(H):
+        for y in range(W):
+          dist = np.linalg.norm(np.array([x, y]) - np.array(pos))
+          heatmap[x, y] += intensity * np.exp(-dist**2 / (2 * sigma**2))
+    
+    for obj in world.objects:
+      if obj.__class__.__name__ in ['Zombie', 'Skeleton']:
+        apply_gaussian(heatmap, obj.pos, intensity=1.0, sigma=3.5)
+    
+    for x in range(H):
+      for y in range(W):
+        tile, _ = world[(x, y)]
+        if tile == 'lava':
+          apply_gaussian(heatmap, (x, y), intensity=0.7, sigma=2.5)
+    
+    # danger index in red
+    heatmap = heatmap / heatmap.max() * 255 if heatmap.max() > 0 else heatmap
+    red_channel = heatmap.astype(np.uint8)
+    
+    # agent as a green dot
+    green_channel = np.zeros_like(red_channel, dtype=np.uint8)
+    player = self._env._player
+    px, py = player.pos
+    if 0 <= px < H and 0 <= py < W:
+      green_channel[px, py] = 255
+    
+    rgb_heatmap = np.stack([red_channel, green_channel, np.zeros_like(red_channel)], axis=-1)
+    return rgb_heatmap
 
   def render(self):
     return self._env.render()

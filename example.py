@@ -10,9 +10,10 @@ warnings.filterwarnings('ignore', '.*truncated to dtype int32.*')
 def main():
 
   config = embodied.Config(dreamerv3.Agent.configs['defaults'])
+  # Update the logdir directory when you add representations / change dimensions
   config = config.update({
       **dreamerv3.Agent.configs['size25m'],
-      'logdir': f'/home/ei-lab/Documents/work/mk-dreamerv3/dreamerv3/dreamerv3/logdir/test3-representations',
+      'logdir': f'/home/ei-lab/Documents/work/mk-dreamerv3/dreamerv3/dreamerv3/logdir/test5-representations',
       'run.train_ratio': 32,
   })
   config = embodied.Flags(config).parse()
