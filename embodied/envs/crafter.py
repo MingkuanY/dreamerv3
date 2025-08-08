@@ -66,31 +66,27 @@ class Crafter(embodied.Env):
     
     image, reward, self._done, info = self._env.step(action['action']) # gets default reward from Env step function
     
-    current_inventory = info['inventory']
-    if self._prev_inventory:
-      # Reward for any positive increase in inventory counts
-      for item, count in current_inventory.items():
-          prev_count = self._prev_inventory.get(item, 0)
-          diff = count - prev_count
-          if diff > 0:
-              reward += 0.1 * diff  # scale as you like
-    self._prev_inventory = current_inventory.copy()
+    
+    ### Reward shaping - item collection task
+    # current_inventory = info['inventory']
+    # if self._prev_inventory:
+    #   # Reward for any positive increase in inventory counts
+    #   for item, count in current_inventory.items():
+    #       prev_count = self._prev_inventory.get(item, 0)
+    #       diff = count - prev_count
+    #       if diff > 0:
+    #           reward += 0.1 * diff  # scale as you like
+    # self._prev_inventory = current_inventory.copy()
+    # # Track reward and inventory count changes
+    # print(f"[Step {self._length}] Reward: {reward:.2f}")
+    # print("Inventory:")
+    # for item, count in current_inventory.items():
+    #     prev_count = self._prev_inventory.get(item, 0) if self._prev_inventory else 0
+    #     if count != prev_count:
+    #         print(f"  {item}: {prev_count} -> {count} (+{count - prev_count})")
+    # print("-" * 30)
     
     self._reward = reward
-    
-    
-    
-    # Track reward and inventory count changes
-    print(f"[Step {self._length}] Reward: {reward:.2f}")
-    print("Inventory:")
-    for item, count in current_inventory.items():
-        prev_count = self._prev_inventory.get(item, 0) if self._prev_inventory else 0
-        if count != prev_count:
-            print(f"  {item}: {prev_count} -> {count} (+{count - prev_count})")
-    print("-" * 30)
-
-    
-    
     
     self._length += 1
     if self._done and self._logdir:
@@ -190,12 +186,15 @@ class Crafter(embodied.Env):
     heatmap = heatmap / heatmap.max() * 255 if heatmap.max() > 0 else heatmap
     red_channel = heatmap.astype(np.uint8)
     
-    # agent as a green dot
+    # agent as a small green square
     green_channel = np.zeros_like(red_channel, dtype=np.uint8)
     player = self._env._player
     px, py = player.pos
-    if 0 <= px < H and 0 <= py < W:
-      green_channel[px, py] = 255
+    for dx in [-1, 0, 1]:
+      for dy in [-1, 0, 1]:
+        x, y = px + dx, py + dy
+        if 0 <= x < H and 0 <= y < W:
+          green_channel[x, y] = 255
     
     rgb_heatmap = np.stack([red_channel, green_channel, np.zeros_like(red_channel)], axis=-1)
     return rgb_heatmap
