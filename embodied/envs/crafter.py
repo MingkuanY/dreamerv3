@@ -20,6 +20,7 @@ class Crafter(embodied.Env):
     self._achievements = crafter.constants.achievements.copy()
     self._done = True
     self.visualize = False
+    self._health_map = None
     if self.visualize:
       self._image_util = ImageUtil(str(self._logdir), experiment_label='crafter')
 
@@ -35,6 +36,7 @@ class Crafter(embodied.Env):
         'grayscale': embodied.Space(np.uint8, self._env.observation_space.shape),
         'semantic': embodied.Space(np.uint8, shape=(64, 64, 1)),
         'danger': embodied.Space(np.uint8, shape=(64, 64, 3)),
+        'health': embodied.Space(np.uint8, shape=(64, 64, 1))
     }
     if self._logs:
       spaces.update({
@@ -62,6 +64,8 @@ class Crafter(embodied.Env):
       
       if self.visualize:
         self._save_image(image)
+      
+      self._health_map = np.zeros((64, 64), dtype=np.uint8)
       return self._obs(image, 0.0, {}, is_first=True)
     
     image, reward, self._done, info = self._env.step(action['action']) # gets default reward from Env step function
@@ -130,6 +134,12 @@ class Crafter(embodied.Env):
     
     danger = self._danger_heatmap()
     
+    player = self._env._player
+    px, py = player.pos
+    self._health_map[px, py] = player.health
+    scaled_health_map = (self._health_map / 10 * 255).astype(np.uint8) # Max player health is 9
+    health = np.expand_dims(scaled_health_map, axis=-1)
+    
     obs = dict(
         image=image,
         reward=np.float32(reward),
@@ -140,6 +150,7 @@ class Crafter(embodied.Env):
         grayscale=grayscale,
         semantic=semantic,
         danger=danger,
+        health=health
     )
     if self._logs:
       log_achievements = {

@@ -13,7 +13,7 @@ def main():
   # Update the logdir directory when you add representations / change dimensions
   config = config.update({
       **dreamerv3.Agent.configs['size25m'],
-      'logdir': f'/home/ei-lab/Documents/work/mk-dreamerv3/dreamerv3/dreamerv3/logdir/test-reps-8/7a',
+      'logdir': f'/home/ei-lab/Documents/work/mk-dreamerv3/dreamerv3/dreamerv3/logdir/test-reps-8/7b',
       'run.train_ratio': 32,
   })
   config = embodied.Flags(config).parse()
