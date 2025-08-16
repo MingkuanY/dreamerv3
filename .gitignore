@@ -7,3 +7,5 @@ MUJOCO_LOG.TXT
 ;
 
 logdir
+
+intentionally-disabled
