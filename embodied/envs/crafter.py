@@ -36,7 +36,8 @@ class Crafter(embodied.Env):
         'grayscale': embodied.Space(np.uint8, self._env.observation_space.shape),
         'semantic': embodied.Space(np.uint8, shape=(64, 64, 1)),
         'danger': embodied.Space(np.uint8, shape=(64, 64, 3)),
-        'health': embodied.Space(np.uint8, shape=(64, 64, 1))
+        'health': embodied.Space(np.uint8, shape=(64, 64, 1)),
+        'proximity': embodied.Space(np.uint8, shape=(64, 64, 1))
     }
     if self._logs:
       spaces.update({
@@ -121,10 +122,12 @@ class Crafter(embodied.Env):
       self, image, reward, info,
       is_first=False, is_last=False, is_terminal=False):
     
+    # grayscale
     grayscale = np.dot(image[...,:3], [0.2989, 0.5870, 0.1140]).astype(np.uint8)
     grayscale = np.expand_dims(grayscale, axis=-1)
     grayscale = np.repeat(grayscale, 3, axis=-1)
     
+    # semantic map
     if "semantic" in info:
       semantic = info["semantic"]
     else:
@@ -132,13 +135,22 @@ class Crafter(embodied.Env):
     semantic = np.expand_dims(semantic, axis=-1)
     semantic = (semantic / 12.0 * 255).astype(np.uint8)
     
+    # danger heatmap
     danger = self._danger_heatmap()
     
+    # health scalar
     player = self._env._player
     px, py = player.pos
-    self._health_map[px, py] = player.health
+    for dx in [-1, 0, 1]:
+      for dy in [-1, 0, 1]:
+          x, y = px + dx, py + dy
+          if 0 <= x < self._health_map.shape[0] and 0 <= y < self._health_map.shape[1]:
+              self._health_map[x, y] = player.health
     scaled_health_map = (self._health_map / 10 * 255).astype(np.uint8) # Max player health is 9
     health = np.expand_dims(scaled_health_map, axis=-1)
+    
+    # proximity
+    proximity = self._proximity_map()
     
     obs = dict(
         image=image,
@@ -150,7 +162,8 @@ class Crafter(embodied.Env):
         grayscale=grayscale,
         semantic=semantic,
         danger=danger,
-        health=health
+        health=health,
+        proximity=proximity
     )
     if self._logs:
       log_achievements = {
@@ -209,6 +222,59 @@ class Crafter(embodied.Env):
     
     rgb_heatmap = np.stack([red_channel, green_channel, np.zeros_like(red_channel)], axis=-1)
     return rgb_heatmap
+  
+  def _proximity_map(self, max_range=12, sigma=2.5):
+    world = self._env._world
+    H, W = world.area
+    player = self._env._player
+    px, py = player.pos
+    
+    dirs = [(-1, -1), (-1, 0), (-1, 1),
+            (0, -1), (0, 0), (0, 1),
+            (1, -1), (1, 0), (1, 1)]
+    grid3x3 = np.zeros((3, 3), dtype=np.float32)
+    
+    for obj in world.objects:
+        ox, oy = obj.pos
+        dx, dy = ox - px, oy - py
+
+        if abs(dx) > max_range or abs(dy) > max_range:
+            continue
+
+        best_dir = None
+        best_val = -1
+        for (dir_x, dir_y) in dirs:
+            if dir_x == 0 and dir_y == 0:
+                continue
+            dot = dx * dir_x + dy * dir_y
+            norm = np.sqrt(dx**2 + dy**2) * np.sqrt(dir_x**2 + dir_y**2)
+            if norm > 0:
+                cos_sim = dot / norm
+                if cos_sim > best_val:
+                    best_val = cos_sim
+                    best_dir = (dir_x, dir_y)
+
+        if best_dir is None:
+            continue
+
+        gx, gy = 1 + best_dir[0], 1 + best_dir[1]
+
+        dist = np.sqrt(dx**2 + dy**2)
+        if dist > 0:
+            grid3x3[gx, gy] += np.exp(-dist**2 / (2 * sigma**2))
+
+    if grid3x3.max() > 0:
+        grid3x3 = grid3x3 / grid3x3.max() * 255
+    grid3x3 = grid3x3.astype(np.uint8)
+    
+    scale = H // 3 
+    grid64 = np.zeros((H, W), dtype=np.uint8)
+    for i in range(3):
+        for j in range(3):
+            grid64[i*scale:(i+1)*scale, j*scale:(j+1)*scale] = grid3x3[i, j]
+
+    grid64 = np.expand_dims(grid64, axis=-1)
+    return grid64
 
   def render(self):
     return self._env.render()
