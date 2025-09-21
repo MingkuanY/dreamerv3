@@ -9,3 +9,10 @@ MUJOCO_LOG.TXT
 logdir
 
 intentionally-disabled
+
+wandb
+
+*.run
+*.deb
+
+*.out

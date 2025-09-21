@@ -108,6 +108,14 @@ class RSSM(nj.Module):
     metrics.update(jaxutils.tensorstats(
         self._dist(post).entropy(), 'post_ent'))
     return {'dyn': dyn, 'rep': rep}, metrics
+  
+  def get_dyn(self, outs, free=1.0):
+    prior = self._prior(outs.get('feat', outs['deter']))
+    post = outs['logit']
+    dyn = self._dist(sg(post)).kl_divergence(self._dist(sg(prior)))
+    if free:
+      dyn = jnp.maximum(dyn, free)
+    return dyn
 
   def _prior(self, feat):
     kw = dict(**self.kw, norm=self.norm, act=self.act)
@@ -261,7 +269,7 @@ class SimpleEncoder(nj.Module):
       outs.append(x)
 
     if self.imgkeys:
-      print('ENC')
+      # print('ENC')
       x = self.imginp(data, bdims, jaxutils.COMPUTE_DTYPE) - 0.5
       x = x.reshape((-1, *x.shape[bdims:]))
       for i, depth in enumerate(self.depths):
@@ -269,7 +277,7 @@ class SimpleEncoder(nj.Module):
         x = self.get(f'conv{i}', Conv2D, depth, self.kernel, stride, **kw)(x)
       assert x.shape[-3] == x.shape[-2] == self.minres, x.shape
       x = x.reshape((x.shape[0], -1))
-      print(x.shape, 'out')
+      # print(x.shape, 'out')
       outs.append(x)
 
     x = jnp.concatenate(outs, -1)

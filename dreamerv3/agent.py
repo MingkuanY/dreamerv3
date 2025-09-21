@@ -3,6 +3,8 @@ from functools import partial as bind
 
 import embodied
 import jax
+import random as py_rand
+from jax import random
 import jax.numpy as jnp
 import numpy as np
 import optax
@@ -135,10 +137,105 @@ class Agent(nj.Module):
     prevact = jaxutils.onehot_dict(prevact, self.act_space)
     lat, out = self.dyn.observe(
         prevlat, prevact, embed, obs['is_first'], bdims=1)
+    
+    outs = {}
+    
+    if mode not in ['train', 'eval', 'explore']:
+      available_keys = ["image", "grayscale", "semantic", "danger", "health", "proximity"]
+      if 'surprise' in mode:
+        used_keys = ['None'] + available_keys
+        used_keys = np.array(used_keys)
+        total_newlat_seperate = []
+        surprises = []
+        # Compute baseline surprise
+        # base_surprise = self.wm.rssm.get_dist(latent).kl_divergence(self.wm.rssm.get_dist(prior_orig))
+        base_surprise = self.dyn.get_dyn(out)
+        
+        # Run N version
+        # Mask each key individually and compute surprise
+        # for ite, image_key in enumerate(available_keys): #Masks each one at a time:
+        #     obs_masked = jax.tree_map(lambda x: x, obs)
+        #     obs_masked[image_key] = jnp.zeros(obs[image_key].shape, dtype=float)
+        #     embed = self.wm.encoder(obs_masked)
+
+        #     temp_latent, temp_prior_orig = self.wm.rssm.obs_step(
+        #     prev_latent, prev_action, embed, obs['is_first'])
+
+        #     surprise = self.wm.rssm.get_dist(temp_latent).kl_divergence(
+        #         self.wm.rssm.get_dist(temp_prior_orig))
+        
+            
+        #     surprises.append(surprise)
+        #     total_newlat_seperate.append(temp_latent)
+        for ite, image_key in enumerate(available_keys): #Keeps only one sensor at a time:
+            # Start with all observations as zeros
+            obs_masked = jax.tree_map(lambda x: jnp.zeros_like(x), obs)
+            
+            # Keep only the current image_key unmasked (use original data)
+            obs_masked[image_key] = obs[image_key]
+            
+            embed = self.enc(obs_masked, bdims=1)
+
+            _, temp_outs = self.dyn.observe(
+                prevlat, prevact, embed, obs['is_first'], bdims=1)
+
+            surprise = self.dyn.get_dyn(temp_outs)
+
+            surprises.append(surprise)
+            total_newlat_seperate.append(temp_outs)
+
+        #Sort sensors by surprise (lowest surprise first)
+        surprises_init = jnp.array(surprises)
+        surprises_init = surprises_init.flatten()
+        sorted_indices = jnp.argsort(surprises_init)
+
+        #Create N more latents by iteratively masking according to the order of sorted indices:
+        obs_iter = jax.tree_map(lambda x: x, obs)
+        for i in range(len(sorted_indices)):
+            idx = sorted_indices[i] # 
+            outs[f'sorted_indices_{i}'] = jnp.array([sorted_indices[i]])
+            # Use conditional masking for each key based on sorted order
+            for j, key_name in enumerate(available_keys):
+                # Check if this key should be masked at this step (idx matches the key's position)
+                should_mask = (idx == j)
+                obs_iter[key_name] = jnp.where(
+                    should_mask,
+                    jnp.zeros_like(obs_iter[key_name]),
+                    obs_iter[key_name]
+                )
+            
+            embed = self.enc(obs_iter, bdims=1)
+            _, temp_outs = self.dyn.observe(
+                prevlat, prevact, embed, obs['is_first'], bdims=1)
+            surprise = self.dyn.get_dyn(temp_outs)
+            
+            surprises.append(surprise)
+            total_newlat_seperate.append(temp_outs)
+        
+        total_newlat_seperate.append(temp_outs)
+        surprises.append(base_surprise)
+        # Find index of minimum surprise
+        surprises = jnp.array(surprises)
+        min_idx = jnp.argmin(surprises)
+        
+        # Stack candidates and select using advanced indexing
+        stacked_latents = jax.tree_map(
+            lambda *candidates: jnp.stack(candidates, axis=0),
+            *total_newlat_seperate
+        )
+    
+        # Select the latent with lowest surprise
+        out = jax.tree_map(
+            lambda stacked: stacked[min_idx],
+            stacked_latents
+        )
+        out = {k: v[min_idx] for k, v in stacked_latents.items() if k != "image_key"} # I dont think this does anything.
+      
+        outs['min_idx'] = jnp.array([min_idx])
+    
     actor = self.actor(out, bdims=1)
     act = sample(actor)
 
-    outs = {}
     if self.config.replay_context:
       outs.update({k: out[k] for k in self.aux_spaces if k != 'stepid'})
       outs['stoch'] = jnp.argmax(outs['stoch'], -1).astype(jnp.int32)
@@ -221,8 +318,81 @@ class Agent(nj.Module):
       outs['replay'] = {'stepid': stepid, 'priority': priority}
 
     return outs, carry, metrics
+  
+  def randomly_mask_images_per_timestep(self, data, key, mask_value=0.0):
+    """
+    Randomly mask 0 to n-1 images for each timestep, ensuring at least one image remains unmasked.
+    
+    Args:
+        data: Dictionary containing the dataset with image keys
+        key: JAX random key
+        mask_value: Value to use for masked pixels (default: 0.0)
+    
+    Returns:
+        Modified data dictionary with randomly masked images
+    """
+    # Create a copy of the data to avoid modifying the original
+    masked_data = data.copy()
+    
+    # Image keys to process
+            # Image keys to process
+    image_keys = [
+        "image", "grayscale", "semantic", "danger", "health", "proximity"
+    ]
+    available_keys = [k for k in image_keys if k in data]
+    # print('Loss on Keys: ',available_keys)
+    if len(available_keys) == 0:
+        return masked_data
+    
+    n_images = len(available_keys)
+    batch_size, seq_len = data[available_keys[0]].shape[0], data[available_keys[0]].shape[1]  # 16, 64
+    
+    # Split keys
+    key1, key2 = random.split(key)
+    
+    # For each (batch, timestep), randomly choose how many images to mask (0 to n-1)
+    num_to_mask = random.randint(key1, shape=(batch_size, seq_len), minval=0, maxval=n_images)
+    
+    # Generate random values for each image at each (batch, timestep)
+    # Shape: [batch_size, seq_len, n_images]
+    random_vals = random.uniform(key2, shape=(batch_size, seq_len, n_images))
+    
+    # Sort the random values to get rankings (0 = smallest, n_images-1 = largest)
+    rankings = jnp.argsort(random_vals, axis=-1)
+    
+    # Create a mask where we mask images with ranking < num_to_mask
+    # This gives us a random selection of num_to_mask images
+    mask_matrix = jnp.zeros((batch_size, seq_len, n_images), dtype=bool)
+    
+    for i in range(n_images):
+        # For each image position, check if its ranking is less than num_to_mask
+        image_rank = jnp.where(rankings == i, 
+                            jnp.arange(n_images)[None, None, :], 
+                            n_images)  # Set to n_images if not this image
+        min_rank = jnp.min(image_rank, axis=-1)  # Get the ranking for image i
+        should_mask = min_rank < num_to_mask
+        mask_matrix = mask_matrix.at[:, :, i].set(should_mask)
+    
+    # Apply masks to each image
+    for i, img_key in enumerate(available_keys):
+        images = data[img_key]
+        
+        # Expand mask to match image dimensions
+        mask = mask_matrix[:, :, i].reshape(batch_size, seq_len, 1, 1, 1)
+        
+        # Apply mask: where mask is True, replace with mask_value
+        masked_images = jnp.where(mask, mask_value, images)
+        
+        # Update the data dictionary
+        masked_data[img_key] = masked_images
+        # print('Masking...')
+    
+    return masked_data
 
   def loss(self, data, carry, update=True):
+    key = random.PRNGKey(42)
+    data = self.randomly_mask_images_per_timestep(data, key, mask_value=0.0)
+    
     metrics = {}
     prevlat, prevact = carry
 

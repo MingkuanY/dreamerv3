@@ -152,6 +152,10 @@ class Crafter(embodied.Env):
     # proximity
     proximity = self._proximity_map()
     
+    # manual masks
+    masked_image = np.zeros(self._env.observation_space.shape, dtype=np.uint8)
+    masked_grayscale = np.zeros(self._env.observation_space.shape, dtype=np.uint8)
+    
     obs = dict(
         image=image,
         reward=np.float32(reward),

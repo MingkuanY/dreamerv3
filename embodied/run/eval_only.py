@@ -22,6 +22,9 @@ def eval_only(make_agent, make_env, make_logger, args):
   episodes = defaultdict(embodied.Agg)
   should_log = embodied.when.Clock(args.log_every)
   policy_fps = embodied.FPS()
+  
+  m = 'eval'
+  # m = 'surprise'
 
   @embodied.timer.section('log_step')
   def log_step(tran, worker):
@@ -48,6 +51,10 @@ def eval_only(make_agent, make_env, make_logger, args):
 
     if tran['is_last']:
       result = episode.result()
+      if m == 'surprise':
+        sorted_indices_list = [int(tran[f'sorted_indices_{i}']) for i in range(6)]
+        print(f"sorted_indices: {sorted_indices_list}")
+        print(f"min_idx: {tran['min_idx']}")
       logger.add({
           'score': result.pop('score'),
           'length': result.pop('length') - 1,
@@ -68,7 +75,7 @@ def eval_only(make_agent, make_env, make_logger, args):
   checkpoint.load(args.from_checkpoint, keys=['agent'])
 
   print('Start evaluation')
-  policy = lambda *args: agent.policy(*args, mode='eval')
+  policy = lambda *args: agent.policy(*args, mode=m)
   driver.reset(agent.init_policy)
   while step < args.steps:
     driver(policy, steps=10)

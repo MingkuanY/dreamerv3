@@ -13,7 +13,7 @@ def main():
   # Update the logdir directory when you add representations / change dimensions
   config = config.update({
       **dreamerv3.Agent.configs['size25m'],
-      'logdir': f'/home/ei-lab/Documents/work/mk-dreamerv3/dreamerv3/dreamerv3/logdir/test-reps-8/15',
+      'logdir': f'/home/ei-lab/Documents/work/mk-dreamerv3/dreamerv3/dreamerv3/logdir/model-with-proximity',
       'run.train_ratio': 32,
   })
   config = embodied.Flags(config).parse()
@@ -33,9 +33,9 @@ def main():
     logdir = embodied.Path(config.logdir)
     return embodied.Logger(embodied.Counter(), [
         embodied.logger.TerminalOutput(config.filter),
-        embodied.logger.JSONLOutput(logdir, 'metrics.jsonl'),
+        embodied.logger.JSONLOutput(logdir, 'invert_health_surprise.jsonl'), # metrics.jsonl for training
         embodied.logger.TensorBoardOutput(logdir),
-        # embodied.logger.WandbOutput(logdir.name, config=config),
+        # embodied.logger.WandBOutput(logdir.name, config=config),
     ])
 
   def make_replay(config):
@@ -62,9 +62,14 @@ def main():
       replay_context=config.replay_context,
   )
 
-  embodied.run.train(
+  # embodied.run.train(
+  #     bind(make_agent, config),
+  #     bind(make_replay, config),
+  #     bind(make_env, config),
+  #     bind(make_logger, config), args)
+
+  embodied.run.eval_only(
       bind(make_agent, config),
-      bind(make_replay, config),
       bind(make_env, config),
       bind(make_logger, config), args)
 
