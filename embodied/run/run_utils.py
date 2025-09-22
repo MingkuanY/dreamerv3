@@ -18,7 +18,7 @@ class ImageUtil:
         images_folder = os.path.join(base_folder, experiment_label)
         self.create_if_not_there([base_folder, images_folder])
 
-        self.actual_image_folder = os.path.join(images_folder, 'actual')
+        self.actual_image_folder = os.path.join(images_folder, 'test') # Change to representation name for storing visualized images
         self.fwd_image_folder = os.path.join(images_folder, 'fwd_decoded')
         self.rev_image_folder = os.path.join(images_folder, 'rev_decoded')
         self.comp_image_folder = os.path.join(images_folder, 'comparison_grids')

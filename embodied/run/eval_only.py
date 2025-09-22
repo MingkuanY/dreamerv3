@@ -23,8 +23,8 @@ def eval_only(make_agent, make_env, make_logger, args):
   should_log = embodied.when.Clock(args.log_every)
   policy_fps = embodied.FPS()
   
-  m = 'eval'
-  # m = 'surprise'
+  # m = 'eval'
+  m = 'surprise'
 
   @embodied.timer.section('log_step')
   def log_step(tran, worker):

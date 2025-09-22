@@ -58,7 +58,7 @@ class Crafter(embodied.Env):
       self._length = 0
       self._reward = 0
       self._done = False
-      self._image_count = 0
+      # self._image_count = 0 # If want to visualize by episode instead of overall step count
       
       image = self._env.reset()
       self._prev_inventory = self._env._player.inventory.copy()
@@ -109,8 +109,8 @@ class Crafter(embodied.Env):
         is_terminal=info['discount'] == 0)
   
   def _save_image(self, image):
-    scenario_name = ''
-    image_name = f"{scenario_name}_episode{self._episode:03d}_frame{self._image_count:05d}.png"
+    # For matching with scenario metrics
+    image_name = f"step_{self._image_count:05d}.png"
     self._image_util.print_image(
         image_mat=image,
         image_folder=self._image_util.actual_image_folder,
