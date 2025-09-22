@@ -33,7 +33,7 @@ def main():
     logdir = embodied.Path(config.logdir)
     return embodied.Logger(embodied.Counter(), [
         embodied.logger.TerminalOutput(config.filter),
-        embodied.logger.JSONLOutput(logdir, 'invert_health_surprise.jsonl'), # metrics.jsonl for training
+        embodied.logger.JSONLOutput(logdir, 'test.jsonl'), # metrics.jsonl for training
         embodied.logger.TensorBoardOutput(logdir),
         # embodied.logger.WandBOutput(logdir.name, config=config),
     ])

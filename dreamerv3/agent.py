@@ -187,13 +187,13 @@ class Agent(nj.Module):
         #Sort sensors by surprise (lowest surprise first)
         surprises_init = jnp.array(surprises)
         surprises_init = surprises_init.flatten()
-        sorted_indices = jnp.argsort(surprises_init)
+        sorted_indices = jnp.argsort(surprises_init, descending=True)
 
         #Create N more latents by iteratively masking according to the order of sorted indices:
         obs_iter = jax.tree_map(lambda x: x, obs)
-        for i in range(len(sorted_indices)):
+        depth = -1
+        for i in range(len(sorted_indices[:depth])):
             idx = sorted_indices[i] # 
-            outs[f'sorted_indices_{i}'] = jnp.array([sorted_indices[i]])
             # Use conditional masking for each key based on sorted order
             for j, key_name in enumerate(available_keys):
                 # Check if this key should be masked at this step (idx matches the key's position)
@@ -232,6 +232,8 @@ class Agent(nj.Module):
         out = {k: v[min_idx] for k, v in stacked_latents.items() if k != "image_key"} # I dont think this does anything.
       
         outs['min_idx'] = jnp.array([min_idx])
+        for i in range(len(sorted_indices)):
+          outs[f'sorted_indices_{i}'] = jnp.array([sorted_indices[i]])
     
     actor = self.actor(out, bdims=1)
     act = sample(actor)

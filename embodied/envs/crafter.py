@@ -19,7 +19,7 @@ class Crafter(embodied.Env):
     self._reward = None
     self._achievements = crafter.constants.achievements.copy()
     self._done = True
-    self.visualize = False
+    self.visualize = True # toggle visualize for analysis
     self._health_map = None
     if self.visualize:
       self._image_util = ImageUtil(str(self._logdir), experiment_label='crafter')
@@ -109,7 +109,8 @@ class Crafter(embodied.Env):
         is_terminal=info['discount'] == 0)
   
   def _save_image(self, image):
-    image_name = f"episode{self._episode:03d}_frame{self._image_count:05d}.png"
+    scenario_name = ''
+    image_name = f"{scenario_name}_episode{self._episode:03d}_frame{self._image_count:05d}.png"
     self._image_util.print_image(
         image_mat=image,
         image_folder=self._image_util.actual_image_folder,

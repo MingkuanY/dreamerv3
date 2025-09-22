@@ -48,16 +48,25 @@ def eval_only(make_agent, make_env, make_logger, args):
         episode.add(key, value, agg='avg')
       if re.match(args.log_keys_max, key):
         episode.add(key, value, agg='max')
+        
+    if m == 'surprise':
+      sorted_indices_list = [int(tran[f'sorted_indices_{i}']) for i in range(6)]
+      print(f"sorted_indices: {sorted_indices_list}")
+      logger.add({
+          'min_idx': tran['min_idx'],
+          'sorted_indices_0': int(tran['sorted_indices_0']),
+          'sorted_indices_1': int(tran['sorted_indices_1']),
+          'sorted_indices_2': int(tran['sorted_indices_2']),
+          'sorted_indices_3': int(tran['sorted_indices_3']),
+          'sorted_indices_4': int(tran['sorted_indices_4']),
+          'sorted_indices_5': int(tran['sorted_indices_5']),
+      }, prefix='episode')
 
     if tran['is_last']:
       result = episode.result()
-      if m == 'surprise':
-        sorted_indices_list = [int(tran[f'sorted_indices_{i}']) for i in range(6)]
-        print(f"sorted_indices: {sorted_indices_list}")
-        print(f"min_idx: {tran['min_idx']}")
       logger.add({
           'score': result.pop('score'),
-          'length': result.pop('length') - 1,
+          'length': result.pop('length') - 1
       }, prefix='episode')
       rew = result.pop('rewards')
       if len(rew) > 1:

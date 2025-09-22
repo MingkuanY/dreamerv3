@@ -20,7 +20,7 @@ def gen_score(file_path):
     return mean, std
 
 def main():
-    mean, std = gen_score('/home/ei-lab/Documents/work/mk-dreamerv3/dreamerv3/dreamerv3/logdir/model-with-proximity/invert_health_surprise.jsonl')
+    mean, std = gen_score('/home/ei-lab/Documents/work/mk-dreamerv3/dreamerv3/dreamerv3/logdir/model-with-proximity/test.jsonl')
     print(f"Mean of episode/score: {mean:.4f}")
     print(f"Std of episode/score: {std:.4f}")
     
