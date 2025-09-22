@@ -105,17 +105,18 @@ def main():
     print(f"Mean of episode/score: {mean:.4f}")
     print(f"Std of episode/score: {std:.4f}")
     
-    # Analyze representations
-    output_file = analyze_representations(input_file)
-    
-    # Show a few examples from the output
-    print(f"\nFirst few representation analysis results:")
-    with open(output_file, "r") as f:
-        for i, line in enumerate(f):
-            if i < 5:  # Show first 5 entries
-                print(json.loads(line))
-            else:
-                break
+    if True: # whether to analyze surprise
+        # Analyze representations
+        output_file = analyze_representations(input_file)
+        
+        # Show a few examples from the output
+        print(f"\nFirst few representation analysis results:")
+        with open(output_file, "r") as f:
+            for i, line in enumerate(f):
+                if i < 5:  # Show first 5 entries
+                    print(json.loads(line))
+                else:
+                    break
     
 if __name__ == '__main__':
     main()

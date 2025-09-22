@@ -23,6 +23,7 @@ class Crafter(embodied.Env):
     self._health_map = None
     if self.visualize:
       self._image_util = ImageUtil(str(self._logdir), experiment_label='crafter')
+    self._image_count = 0
 
   @property
   def obs_space(self):
