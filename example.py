@@ -33,7 +33,7 @@ def main():
     logdir = embodied.Path(config.logdir)
     return embodied.Logger(embodied.Counter(), [
         embodied.logger.TerminalOutput(config.filter),
-        embodied.logger.JSONLOutput(logdir, 'test.jsonl'), # metrics.jsonl for training
+        embodied.logger.JSONLOutput(logdir, 'metrics.jsonl'), # metrics.jsonl for training
         embodied.logger.TensorBoardOutput(logdir),
         # embodied.logger.WandBOutput(logdir.name, config=config),
     ])
@@ -62,16 +62,16 @@ def main():
       replay_context=config.replay_context,
   )
 
-  # embodied.run.train(
-  #     bind(make_agent, config),
-  #     bind(make_replay, config),
-  #     bind(make_env, config),
-  #     bind(make_logger, config), args)
-
-  embodied.run.eval_only(
+  embodied.run.train(
       bind(make_agent, config),
+      bind(make_replay, config),
       bind(make_env, config),
       bind(make_logger, config), args)
+
+  # embodied.run.eval_only(
+  #     bind(make_agent, config),
+  #     bind(make_env, config),
+  #     bind(make_logger, config), args)
 
 
 if __name__ == '__main__':

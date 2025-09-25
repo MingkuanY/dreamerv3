@@ -19,7 +19,7 @@ class Crafter(embodied.Env):
     self._reward = None
     self._achievements = crafter.constants.achievements.copy()
     self._done = True
-    self.visualize = True # toggle visualize for analysis
+    self.visualize = False # toggle visualize for analysis
     self._health_map = None
     if self.visualize:
       self._image_util = ImageUtil(str(self._logdir), experiment_label='crafter')

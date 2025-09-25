@@ -44,7 +44,7 @@ defaults:
     num_envs: 1 # change to 32 for training
     num_envs_eval: 4
     expl_until: 0
-    log_every: 30 # usually 120
+    log_every: 120 # usually 120
     save_every: 900
     eval_every: 180
     eval_initial: True
@@ -60,8 +60,8 @@ defaults:
     log_video_fps: 20
     log_video_streams: 4
     log_episode_timeout: 60
-    from_checkpoint: '/home/ei-lab/Documents/work/mk-dreamerv3/dreamerv3/dreamerv3/logdir/model-with-proximity/checkpoint.ckpt' # for eval on model-with-proximity
-    # from_checkpoint: '' # for training
+    # from_checkpoint: '/home/ei-lab/Documents/work/mk-dreamerv3/dreamerv3/dreamerv3/logdir/model-with-proximity/checkpoint.ckpt' # for eval on model-with-proximity
+    from_checkpoint: '' # for training
     actor_addr: 'tcp://localhost:{auto}'
     replay_addr: 'tcp://localhost:{auto}'
     logger_addr: 'tcp://localhost:{auto}'
